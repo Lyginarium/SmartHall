@@ -14,18 +14,22 @@ byte colPins[COLS] = {8, 7, 6};
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
 bool isSystemArmed;
+bool isArmingProcedureActivated;
 char armingCode[] = "0203";
 char disarmingCode[] = "0302";
 const byte redLED = 9;
 const byte greenLED = 10;
 byte i = 0;
 bool isDoorClosed;
+unsigned long previousMillisLEDSwitch = 0;
+unsigned long  armingProcedureCountdown = 0;
 
 void setup()
 {
   Serial.begin(9600);
   Wire.begin();
   isSystemArmed = false;
+  isArmingProcedureActivated = false;
   Serial.println("Sysrem Disarmed");
   pinMode(redLED, OUTPUT);
   pinMode(greenLED, OUTPUT);
@@ -35,8 +39,24 @@ void setup()
  
 void loop()
 {
-  if (isSystemArmed) systemDisarming ();
-  else systemArming ();
+  if (!isSystemArmed & !isArmingProcedureActivated) enterArmingCode ();
+  if (!isSystemArmed & isArmingProcedureActivated)
+    {
+     unsigned long currentMillis = millis();
+     if(currentMillis - previousMillisLEDSwitch > 500) 
+      {
+       previousMillisLEDSwitch = currentMillis;  
+       if (digitalRead(redLED)) digitalWrite(redLED, LOW);
+       else digitalWrite(redLED, HIGH);
+       if (digitalRead(greenLED)) digitalWrite(greenLED, LOW);
+       else digitalWrite(greenLED, HIGH);
+      }
+     if(currentMillis - armingProcedureCountdown > 60000) 
+      {
+       isArmingProcedureActivated = false; 
+       tone(13, 1800, 1000);
+      }
+    }  
 
   Wire.requestFrom(8, 1);    // request 1 byte from slave device #8
 
@@ -49,7 +69,7 @@ void loop()
 
 }
 
-void systemArming ()
+void enterArmingCode ()
 {
   char key = keypad.getKey();
   if (key != NO_KEY)
@@ -59,10 +79,11 @@ void systemArming ()
         {
          if (i == strlen(armingCode) - 1)
           {
-          isSystemArmed = true;
-          digitalWrite(greenLED, LOW);
-          digitalWrite(redLED, HIGH);
-          Serial.println("System Armed");
+          isArmingProcedureActivated = true;
+          armingProcedureCountdown = millis();
+          //digitalWrite(greenLED, LOW);
+          //digitalWrite(redLED, HIGH);
+          //Serial.println("System Armed");
           tone(13, 1800, 1000);
           i = 0;
           }
