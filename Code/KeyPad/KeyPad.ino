@@ -15,6 +15,8 @@ Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
 bool isSystemArmed;
 bool isArmingProcedureActivated;
+bool isDoorClosedAtTheBeginingOfArmingProcedure;
+bool wasDoorOpenedDuringArmingProcedure;
 char armingCode[] = "0203";
 char disarmingCode[] = "0302";
 const byte redLED = 9;
@@ -30,7 +32,11 @@ void setup()
   Wire.begin();
   isSystemArmed = false;
   isArmingProcedureActivated = false;
-  Serial.println("Sysrem Disarmed");
+  isDoorClosedAtTheBeginingOfArmingProcedure = false;
+  wasDoorOpenedDuringArmingProcedure = false;
+  Serial.println("Включение системы...  Система в работе.");
+  Serial.println("Текущий стаус системы: снято с охраны.");
+  Serial.println();
   pinMode(redLED, OUTPUT);
   pinMode(greenLED, OUTPUT);
   digitalWrite(redLED, LOW);
@@ -39,11 +45,31 @@ void setup()
  
 void loop()
 {
-  if (!isSystemArmed & !isArmingProcedureActivated) enterArmingCode ();
-  if (!isSystemArmed & isArmingProcedureActivated)
+  if (!isSystemArmed && !isArmingProcedureActivated) enterArmingCode ();
+  if (!isSystemArmed && isArmingProcedureActivated & (isDoorClosed  ||  isDoorClosedAtTheBeginingOfArmingProcedure))
     {
+     if(!isDoorClosedAtTheBeginingOfArmingProcedure) isDoorClosedAtTheBeginingOfArmingProcedure = true; 
+     if(isDoorClosedAtTheBeginingOfArmingProcedure && !isDoorClosed && !wasDoorOpenedDuringArmingProcedure)
+     {
+      wasDoorOpenedDuringArmingProcedure = true;
+      Serial.println("Счастливого пути!");
+      Serial.println();
+     }
+     if(wasDoorOpenedDuringArmingProcedure && isDoorClosed)
+      {
+        isSystemArmed = true;
+        isArmingProcedureActivated = false;
+        isDoorClosedAtTheBeginingOfArmingProcedure = false;
+        wasDoorOpenedDuringArmingProcedure = false;
+        digitalWrite(redLED, HIGH);
+        digitalWrite(greenLED, LOW);
+        Serial.println("Текущий стаус системы: на охране.");
+        Serial.println();
+        tone(13, 1800, 1000);
+      }
+      
      unsigned long currentMillis = millis();
-     if(currentMillis - previousMillisLEDSwitch > 500) 
+     if(currentMillis - previousMillisLEDSwitch > 500 && !isSystemArmed) 
       {
        previousMillisLEDSwitch = currentMillis;  
        if (digitalRead(redLED)) digitalWrite(redLED, LOW);
@@ -51,12 +77,24 @@ void loop()
        if (digitalRead(greenLED)) digitalWrite(greenLED, LOW);
        else digitalWrite(greenLED, HIGH);
       }
-     if(currentMillis - armingProcedureCountdown > 60000) 
+     if(currentMillis - armingProcedureCountdown > 60000 && !isSystemArmed && !wasDoorOpenedDuringArmingProcedure) 
       {
        isArmingProcedureActivated = false; 
+       isDoorClosedAtTheBeginingOfArmingProcedure = false;
+       Serial.println("Превышено время ожидания. Отмена постановки на охрану.");
+       Serial.println("При необходимости повторите процедуру постановки на охрану сначала.");
+       Serial.println();
        tone(13, 1800, 1000);
       }
-    }  
+    } 
+  if (!isSystemArmed && isArmingProcedureActivated && !isDoorClosed && !isDoorClosedAtTheBeginingOfArmingProcedure) 
+    {
+      Serial.println("При вводе кода постановки на охрану внутренняя дверь должна быть закрыта!");
+      Serial.println("Закройте внутреннюю дверь и введите код постановки на охрану заново.");
+      Serial.println();
+      tone(13, 1800, 1000);
+      isArmingProcedureActivated = false;
+    }
 
   Wire.requestFrom(8, 1);    // request 1 byte from slave device #8
 
@@ -64,8 +102,8 @@ void loop()
     isDoorClosed = Wire.read(); // receive a byte
     }
     
-  if(isDoorClosed) Serial.println("Door is closed");
-  else Serial.println("Door is opened!");
+  //if(isDoorClosed) Serial.println("Door is closed");
+  //else Serial.println("Door is opened!");
 
 }
 
@@ -81,9 +119,8 @@ void enterArmingCode ()
           {
           isArmingProcedureActivated = true;
           armingProcedureCountdown = millis();
-          //digitalWrite(greenLED, LOW);
-          //digitalWrite(redLED, HIGH);
-          //Serial.println("System Armed");
+          Serial.println("Начата процедура постановки на охрану...");
+          Serial.println();
           tone(13, 1800, 1000);
           i = 0;
           }
