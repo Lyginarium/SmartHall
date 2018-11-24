@@ -1,31 +1,113 @@
-// Wire Slave Sender
-// by Nicholas Zambetti <http://www.zambetti.com>
 
-// Demonstrates use of the Wire library
-// Sends data as an I2C/TWI slave device
-// Refer to the "Wire Master Reader" example for use with this
-
-// Created 29 March 2006
-
-// This example code is in the public domain.
-
-
+#include <SoftwareSerial.h>
+#include <DFMiniMp3.h>
 #include <Wire.h>
 
-const byte ReedRelay = 2;
+class Mp3Notify
+{
+public:
+  static void OnError(uint16_t errorCode)
+  {
+    // see DfMp3_Error for code meaning
+    Serial.print("Com Error ");
+    Serial.println(errorCode);
+  }
+  static void OnPlayFinished(uint16_t track)
+  {
+    Serial.print("Play finished for #");
+    Serial.println(track);  
+  }
+  static void OnCardOnline(uint16_t code)
+  {
+    Serial.println("Card online ");
+  }
+  static void OnCardInserted(uint16_t code)
+  {
+    Serial.println("Card inserted ");
+  }
+  static void OnCardRemoved(uint16_t code)
+  {
+    Serial.println("Card removed ");
+  }
+};
 
-void setup() {
+SoftwareSerial secondarySerial(10, 11); // RX, TX
+DFMiniMp3<SoftwareSerial, Mp3Notify> mp3(secondarySerial);
+
+uint32_t lastAdvert; // длительность проигрывания трека без рекламы
+uint32_t lastPlay; // длительность проигрывания трека
+uint16_t volumeTmp; // громкость
+bool ReedRelayClose; // флаг состояни геркона: 1 - замкнут (дверь закрыта), 0 - разомкнут (дверь открыта)
+const int PlayButton = 2; // кнопка звонка: нажата/отпущена
+const int MP3ModuleBusy = 3; // состояние МП3-плеера: занят/свободен
+const int DoorLimitSwitch = 4; // геркон
+const int PlaybackLED = 5; // индикация состояния МП3-плеера: занят/свободен
+
+
+void setup() 
+{
+  pinMode (PlayButton, INPUT);
+  pinMode (MP3ModuleBusy, INPUT);
+  pinMode (DoorLimitSwitch, INPUT);
+  pinMode (PlaybackLED, OUTPUT);
+  mp3.begin(); // инициализация...
+  mp3.setVolume(15);
   Wire.begin(8);                // join i2c bus with address #8
   Wire.onRequest(requestEvent); // register event
+  Wire.onReceive(receiveEvent);
 }
 
-void loop() {
-  delay(100);
+void loop() 
+{
+if ((digitalRead(PlayButton) ==  LOW)&& // Если нажата кнопка звонка и ничего не проигрывается, то:
+    (digitalRead(MP3ModuleBusy) == HIGH))  
+    {
+      ReedRelayClose = digitalRead(DoorLimitSwitch); // запомнить, в каком состоянии геркон
+      digitalWrite(PlaybackLED, HIGH); // зажечь индикатор активности плеера
+      volumeTmp = mp3.getVolume(); // запомнить громкость
+      mp3.setVolume(0); // убавить громкость до 0
+      mp3.playFolderTrack(1, random(1, mp3.getFolderTrackCount(1) + 1)); // запустить воспроизведение, папка 01, случайный трек
+    
+      for(int i = 1; i <= volumeTmp; i++) // плавно вывести громкость вверх до установленной величины
+        {
+        mp3.setVolume(i);
+        delay(100);
+        }
+        
+  lastAdvert = millis();
+  lastPlay = millis();
+ 
+    }
+    
+ uint32_t now = millis(); // время с начала выполнения программы, мс
+  if ((((now - lastPlay) > 90000)&&(digitalRead(MP3ModuleBusy) == LOW)) || ((digitalRead(DoorLimitSwitch) == LOW) && (ReedRelayClose)))
+  // если трек играет больше 90 секунд или дверь была закрыта и открылась
+  {
+    digitalWrite (PlaybackLED, LOW); // гасим индикатор активности плеера
+    volumeTmp = mp3.getVolume();
+        
+    for(int i = (volumeTmp - 1); i >= 0; i--) // плавно убавляем звук до нуля
+        {
+        mp3.setVolume(i);
+        delay(100);
+        }
+        
+    mp3.stop();
+    mp3.setVolume(volumeTmp);
+   }
+  
+  mp3.loop(); // аптека, улица, фонарь  
 }
 
 // function that executes whenever data is requested by master
 // this function is registered as an event, see setup()
 void requestEvent() {
-  Wire.write(digitalRead(ReedRelay)); // HIGH if the door is closed
+  Wire.write(digitalRead(DoorLimitSwitch)); // HIGH if the door is closed
   // as expected by master
+}
+
+void receiveEvent(byte trackNumber) {
+  while (Wire.available())  // loop through all but the last
+    mp3.playFolderTrack(2, Wire.read());
+   
 }

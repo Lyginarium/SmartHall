@@ -41,7 +41,11 @@ void setup()
   wasDoorOpenedWhileSystemArmed = false;
   firstWarningMessagePlayed = false;
   firstWarningMessagePlayed = false;
-  Serial.println("Включение системы...  Система в работе.");
+  //Serial.println("Включение системы...  Система в работе.");
+  Wire.beginTransmission(8); // transmit to device #8
+  Wire.write(1);        // sends five bytes
+  //Wire.write(x);              // sends one byte
+  Wire.endTransmission();    // stop transmitting
   Serial.println("Текущий стаус системы: снято с охраны.");
   Serial.println();
   pinMode(redLED, OUTPUT);
