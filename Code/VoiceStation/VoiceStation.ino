@@ -34,10 +34,10 @@ public:
 SoftwareSerial secondarySerial(10, 11); // RX, TX
 DFMiniMp3<SoftwareSerial, Mp3Notify> mp3(secondarySerial);
 
-uint32_t lastAdvert; // длительность проигрывания трека без рекламы
 uint32_t lastPlay; // длительность проигрывания трека
 uint16_t volumeTmp; // громкость
 bool ReedRelayClose; // флаг состояни геркона: 1 - замкнут (дверь закрыта), 0 - разомкнут (дверь открыта)
+bool isItDoorBell = false;
 const int PlayButton = 2; // кнопка звонка: нажата/отпущена
 const int MP3ModuleBusy = 3; // состояние МП3-плеера: занят/свободен
 const int DoorLimitSwitch = 4; // геркон
@@ -62,6 +62,7 @@ void loop()
 if ((digitalRead(PlayButton) ==  LOW)&& // Если нажата кнопка звонка и ничего не проигрывается, то:
     (digitalRead(MP3ModuleBusy) == HIGH))  
     {
+      isItDoorBell = true;
       ReedRelayClose = digitalRead(DoorLimitSwitch); // запомнить, в каком состоянии геркон
       digitalWrite(PlaybackLED, HIGH); // зажечь индикатор активности плеера
       volumeTmp = mp3.getVolume(); // запомнить громкость
@@ -74,13 +75,12 @@ if ((digitalRead(PlayButton) ==  LOW)&& // Если нажата кнопка з
         delay(100);
         }
         
-  lastAdvert = millis();
-  lastPlay = millis();
+    lastPlay = millis();
  
     }
     
  uint32_t now = millis(); // время с начала выполнения программы, мс
-  if ((((now - lastPlay) > 90000)&&(digitalRead(MP3ModuleBusy) == LOW)) || ((digitalRead(DoorLimitSwitch) == LOW) && (ReedRelayClose)))
+  if (((((now - lastPlay) > 90000)&&(digitalRead(MP3ModuleBusy) == LOW)) || ((digitalRead(DoorLimitSwitch) == LOW) && (ReedRelayClose))) && isItDoorBell)
   // если трек играет больше 90 секунд или дверь была закрыта и открылась
   {
     digitalWrite (PlaybackLED, LOW); // гасим индикатор активности плеера
@@ -94,20 +94,19 @@ if ((digitalRead(PlayButton) ==  LOW)&& // Если нажата кнопка з
         
     mp3.stop();
     mp3.setVolume(volumeTmp);
+    isItDoorBell = false;
    }
   
   mp3.loop(); // аптека, улица, фонарь  
 }
 
-// function that executes whenever data is requested by master
-// this function is registered as an event, see setup()
-void requestEvent() {
+void requestEvent() 
+{
   Wire.write(digitalRead(DoorLimitSwitch)); // HIGH if the door is closed
-  // as expected by master
-}
+ }
 
-void receiveEvent(byte trackNumber) {
-  while (Wire.available())  // loop through all but the last
-    mp3.playFolderTrack(2, Wire.read());
-   
+void receiveEvent(byte trackNumber) 
+{
+  while (Wire.available())  
+  mp3.playFolderTrack(2, Wire.read());
 }

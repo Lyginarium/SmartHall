@@ -43,11 +43,11 @@ void setup()
   firstWarningMessagePlayed = false;
   //Serial.println("Включение системы...  Система в работе.");
   Wire.beginTransmission(8); // transmit to device #8
-  Wire.write(1);        // sends five bytes
-  //Wire.write(x);              // sends one byte
-  Wire.endTransmission();    // stop transmitting
-  Serial.println("Текущий стаус системы: снято с охраны.");
-  Serial.println();
+  Wire.write(1);        
+  //Wire.write(x);             
+  Wire.endTransmission();    
+  //Serial.println("Текущий стаус системы: снято с охраны.");
+  //Serial.println();
   pinMode(redLED, OUTPUT);
   pinMode(greenLED, OUTPUT);
   digitalWrite(redLED, LOW);
@@ -75,15 +75,21 @@ void loop()
        if(currentMillis - previousMillisPlaybackWarningMessage > 30000 && !firstWarningMessagePlayed && wasDoorOpenedWhileSystemArmed) 
       {
        previousMillisLEDSwitch = currentMillis;  
-       Serial.println("Неизвестный пользователь. Пожалуйста, авторизуйтесь в системе!");
-       Serial.println();
+       //Serial.println("Неизвестный пользователь. Пожалуйста, авторизуйтесь в системе!");
+       //Serial.println();
+       Wire.beginTransmission(8); 
+       Wire.write(3);        // 
+       Wire.endTransmission();
        firstWarningMessagePlayed = true;
        }
        if(currentMillis - previousMillisPlaybackWarningMessage > 120000 && !secondWarningMessagePlayed && wasDoorOpenedWhileSystemArmed) 
       {
        previousMillisLEDSwitch = currentMillis;  
-       Serial.println("Объект находится под охраной! Идентифицируйте себя или немедленно покиньте помещение!");
-       Serial.println();
+       //Serial.println("Объект находится под охраной! Идентифицируйте себя или немедленно покиньте помещение!");
+       //Serial.println();
+       Wire.beginTransmission(8); 
+       Wire.write(4);        // 
+       Wire.endTransmission();
        secondWarningMessagePlayed = true;
        }
     }
@@ -93,8 +99,13 @@ void loop()
      if(isDoorClosedAtTheBeginingOfArmingProcedure && !isDoorClosed && !wasDoorOpenedDuringArmingProcedure)
      {
       wasDoorOpenedDuringArmingProcedure = true;
-      Serial.println("Счастливого пути!");
-      Serial.println();
+      //Serial.println("Счастливого пути!");
+      //Serial.println();
+      //byte val = 5;
+      Wire.beginTransmission(8); 
+      Wire.write(5);        // 
+      Wire.endTransmission();
+      
      }
      if(wasDoorOpenedDuringArmingProcedure && isDoorClosed)
       {
@@ -104,9 +115,12 @@ void loop()
         wasDoorOpenedDuringArmingProcedure = false;
         digitalWrite(redLED, HIGH);
         digitalWrite(greenLED, LOW);
-        Serial.println("Текущий стаус системы: на охране.");
-        Serial.println();
+        //Serial.println("Текущий стаус системы: на охране.");
+        //Serial.println();
         tone(13, 1800, 1000);
+        Wire.beginTransmission(8); 
+        Wire.write(6);        // 
+        Wire.endTransmission();
       }
       
      unsigned long currentMillis = millis();
@@ -123,18 +137,24 @@ void loop()
        isArmingProcedureActivated = false; 
        isDoorClosedAtTheBeginingOfArmingProcedure = false;
        wasDoorOpenedDuringArmingProcedure = false;
-       Serial.println("Превышено время ожидания. Отмена постановки на охрану.");
-       Serial.println("При необходимости повторите процедуру постановки на охрану сначала.");
-       Serial.println();
+       //Serial.println("Превышено время ожидания. Отмена постановки на охрану.");
+       //Serial.println("При необходимости повторите процедуру постановки на охрану сначала.");
+       //Serial.println();
        tone(13, 1800, 1000);
+       Wire.beginTransmission(8); 
+       Wire.write(7);        // 
+       Wire.endTransmission();
       }
     } 
   if (!isSystemArmed && isArmingProcedureActivated && !isDoorClosed && !isDoorClosedAtTheBeginingOfArmingProcedure) 
     {
-      Serial.println("При вводе кода постановки на охрану внутренняя дверь должна быть закрыта!");
-      Serial.println("Закройте внутреннюю дверь и введите код постановки на охрану заново.");
-      Serial.println();
+      //Serial.println("При вводе кода постановки на охрану внутренняя дверь должна быть закрыта!");
+      //Serial.println("Закройте внутреннюю дверь и введите код постановки на охрану заново.");
+      //Serial.println();
       tone(13, 1800, 1000);
+      Wire.beginTransmission(8); 
+      Wire.write(8);        // 
+      Wire.endTransmission();
       isArmingProcedureActivated = false;
     }
 
@@ -161,8 +181,11 @@ void enterArmingCode ()
           {
           isArmingProcedureActivated = true;
           armingProcedureCountdown = millis();
-          Serial.println("Начата процедура постановки на охрану...");
-          Serial.println();
+          //Serial.println("Начата процедура постановки на охрану...");
+          //Serial.println();
+          Wire.beginTransmission(8); 
+          Wire.write(9);        // 
+          Wire.endTransmission();
           tone(13, 1800, 1000);
           i = 0;
           }
@@ -185,10 +208,13 @@ void enterDisarmingCode ()
           isSystemArmed = false;
           digitalWrite(greenLED, HIGH);
           digitalWrite(redLED, LOW);
-          Serial.println("Код принят. Добро пожаловать домой, хозяин!");
-          Serial.println("Текущий статус системы: снято с охраны.");
-          Serial.println();
+          //Serial.println("Код принят. Добро пожаловать домой, хозяин!");
+          //Serial.println("Текущий статус системы: снято с охраны.");
+          //Serial.println();
           tone(13, 1800, 1000);
+          Wire.beginTransmission(8); 
+          Wire.write(10);        // 
+          Wire.endTransmission();
           i = 0;
           wasDoorOpenedWhileSystemArmed = false;
           firstWarningMessagePlayed = false;
