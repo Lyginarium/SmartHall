@@ -74,7 +74,7 @@ void loop()
        }
        if(currentMillis - previousMillisPlaybackWarningMessage > 30000 && !firstWarningMessagePlayed && wasDoorOpenedWhileSystemArmed) 
       {
-       previousMillisLEDSwitch = currentMillis;  
+       //previousMillisLEDSwitch = currentMillis;  //Nahuya?!
        //Serial.println("Неизвестный пользователь. Пожалуйста, авторизуйтесь в системе!");
        //Serial.println();
        Wire.beginTransmission(8); 
@@ -84,7 +84,7 @@ void loop()
        }
        if(currentMillis - previousMillisPlaybackWarningMessage > 120000 && !secondWarningMessagePlayed && wasDoorOpenedWhileSystemArmed) 
       {
-       previousMillisLEDSwitch = currentMillis;  
+       //previousMillisLEDSwitch = currentMillis;  //Nahuya?!
        //Serial.println("Объект находится под охраной! Идентифицируйте себя или немедленно покиньте помещение!");
        //Serial.println();
        Wire.beginTransmission(8); 
@@ -93,17 +93,14 @@ void loop()
        secondWarningMessagePlayed = true;
        }
     }
-  if (!isSystemArmed && isArmingProcedureActivated & (isDoorClosed  ||  isDoorClosedAtTheBeginingOfArmingProcedure))
+  if (!isSystemArmed && isArmingProcedureActivated && (isDoorClosed  ||  isDoorClosedAtTheBeginingOfArmingProcedure))
     {
      if(!isDoorClosedAtTheBeginingOfArmingProcedure) isDoorClosedAtTheBeginingOfArmingProcedure = true; 
      if(isDoorClosedAtTheBeginingOfArmingProcedure && !isDoorClosed && !wasDoorOpenedDuringArmingProcedure)
      {
       wasDoorOpenedDuringArmingProcedure = true;
-      //Serial.println("Счастливого пути!");
-      //Serial.println();
-      //byte val = 5;
       Wire.beginTransmission(8); 
-      Wire.write(5);        // 
+      Wire.write(5);        // Счастливого пути!
       Wire.endTransmission();
       
      }
@@ -115,11 +112,9 @@ void loop()
         wasDoorOpenedDuringArmingProcedure = false;
         digitalWrite(redLED, HIGH);
         digitalWrite(greenLED, LOW);
-        //Serial.println("Текущий стаус системы: на охране.");
-        //Serial.println();
         tone(13, 1800, 1000);
         Wire.beginTransmission(8); 
-        Wire.write(6);        // 
+        Wire.write(6);        // Система на охране
         Wire.endTransmission();
       }
       
@@ -137,36 +132,26 @@ void loop()
        isArmingProcedureActivated = false; 
        isDoorClosedAtTheBeginingOfArmingProcedure = false;
        wasDoorOpenedDuringArmingProcedure = false;
-       //Serial.println("Превышено время ожидания. Отмена постановки на охрану.");
-       //Serial.println("При необходимости повторите процедуру постановки на охрану сначала.");
-       //Serial.println();
        tone(13, 1800, 1000);
        Wire.beginTransmission(8); 
-       Wire.write(7);        // 
+       Wire.write(7);        // Превышено время ожидания. Отмена постановки на охрану.
        Wire.endTransmission();
       }
     } 
   if (!isSystemArmed && isArmingProcedureActivated && !isDoorClosed && !isDoorClosedAtTheBeginingOfArmingProcedure) 
     {
-      //Serial.println("При вводе кода постановки на охрану внутренняя дверь должна быть закрыта!");
-      //Serial.println("Закройте внутреннюю дверь и введите код постановки на охрану заново.");
-      //Serial.println();
       tone(13, 1800, 1000);
       Wire.beginTransmission(8); 
-      Wire.write(8);        // 
+      Wire.write(8);                   // При вводе кода постановки на охрану внутренняя дверь должна быть закрыта!
       Wire.endTransmission();
       isArmingProcedureActivated = false;
     }
 
   Wire.requestFrom(8, 1);    // request 1 byte from slave device #8
-
-  while (Wire.available()) { // slave may send less than requested
-    isDoorClosed = Wire.read(); // receive a byte
-    }
-    
-  //if(isDoorClosed) Serial.println("Door is closed");
-  //else Serial.println("Door is opened!");
-
+  while (Wire.available()) 
+  { 
+    isDoorClosed = Wire.read(); 
+   }
 }
 
 void enterArmingCode ()
@@ -208,9 +193,6 @@ void enterDisarmingCode ()
           isSystemArmed = false;
           digitalWrite(greenLED, HIGH);
           digitalWrite(redLED, LOW);
-          //Serial.println("Код принят. Добро пожаловать домой, хозяин!");
-          //Serial.println("Текущий статус системы: снято с охраны.");
-          //Serial.println();
           tone(13, 1800, 1000);
           Wire.beginTransmission(8); 
           Wire.write(10);        // 
