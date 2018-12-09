@@ -24,6 +24,7 @@ char armingCode[] = "0203";
 char disarmingCode[] = "0302";
 const byte redLED = 9;
 const byte greenLED = 10;
+const byte reedRElayLED = 11;
 byte i = 0;
 bool isDoorClosed;
 unsigned long previousMillisLEDSwitch = 0;
@@ -50,8 +51,10 @@ void setup()
   //Serial.println();
   pinMode(redLED, OUTPUT);
   pinMode(greenLED, OUTPUT);
+  pinMode(reedRElayLED, OUTPUT);
   digitalWrite(redLED, LOW);
   digitalWrite(greenLED, HIGH);
+//  digitalWrite(reedRElayLED, HIGH);
 }
  
 void loop()
@@ -140,18 +143,27 @@ void loop()
     } 
   if (!isSystemArmed && isArmingProcedureActivated && !isDoorClosed && !isDoorClosedAtTheBeginingOfArmingProcedure) 
     {
-      tone(13, 1800, 1000);
+      tone(13, 2600, 1000);
+      delay(100);
       Wire.beginTransmission(8); 
       Wire.write(8);                   // При вводе кода постановки на охрану внутренняя дверь должна быть закрыта!
       Wire.endTransmission();
       isArmingProcedureActivated = false;
+      //Serial.println("bla-bla-bla");
+      //Serial.println(!isSystemArmed && isArmingProcedureActivated && !isDoorClosed && !isDoorClosedAtTheBeginingOfArmingProcedure);
+      //delay(100);
     }
 
   Wire.requestFrom(8, 1);    // request 1 byte from slave device #8
+  //Serial.println("Huyak, Eblys'!");
   while (Wire.available()) 
   { 
     isDoorClosed = Wire.read(); 
+    if(isDoorClosed) digitalWrite(reedRElayLED, LOW);
+    else digitalWrite(reedRElayLED, HIGH);
+    Serial.println(isDoorClosed);
    }
+   
 }
 
 void enterArmingCode ()
@@ -166,10 +178,8 @@ void enterArmingCode ()
           {
           isArmingProcedureActivated = true;
           armingProcedureCountdown = millis();
-          //Serial.println("Начата процедура постановки на охрану...");
-          //Serial.println();
           Wire.beginTransmission(8); 
-          Wire.write(9);        // 
+          Wire.write(9);        // Начата процедура постановки на охрану...
           Wire.endTransmission();
           tone(13, 1800, 1000);
           i = 0;
